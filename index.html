@@ -201,7 +201,7 @@
   
   <header id="appHeader">
     <div class="back-btn" id="backBtn" onclick="goBack()"><i class="fas fa-chevron-left"></i></div>
-    <div class="title-text" id="headerTitle">週間天気 ＆ チケット予約</div>
+    <div class="title-text" id="headerTitle">天気予報 ＆ チケット予約</div>
     <div class="dummy-space"></div>
   </header>
 
@@ -436,7 +436,7 @@
     // ヘッダーUIの調整
     if (screenId === 'weather') {
       backBtn.style.visibility = 'hidden';
-      headerTitle.innerText = "週間天気 ＆ チケット予約";
+      headerTitle.innerText = "天気予報 ＆ チケット予約";
     } else if (screenId === 'checkout') {
       backBtn.style.visibility = 'visible';
       headerTitle.innerText = "購入手続き";
@@ -466,8 +466,8 @@
 
       html += `
         <div class="weather-card" onclick="openSheet('${data.fullDateStr}(${data.dow})')">
-          <div class="date-box">
-            <div class="date-day">${data.dateStr.split('/')[1]}</div>
+          <div class="date-box style="width: 70px;">
+            <div class="date-day" style="font-size: 18px;">${data.dateStr}</div>
             <div class="date-dow ${dowClass}">${data.dow}</div>
           </div>
           <div class="weather-info">
