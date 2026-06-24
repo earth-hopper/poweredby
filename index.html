@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>スキー場 天気＆チケット予約</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --line-green: #00B900;
+      --blue: #007AFF;
+      --apple-black: #000000;
+      --bg-color: #F4F5F7;
+      --text-main: #333333;
+      --text-sub: #888888;
+      --border: #E5E5EA;
+      --snow-light: #E0F2FE;
+      --gold: #FFD700;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans JP', sans-serif; background-color: #EFEFEF; color: var(--text-main); }
+
+    /* モバイルコンテナ */
+    .app-container {
+      max-width: 480px;
+      margin: 0 auto;
+      background-color: var(--bg-color);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* 画面切り替え用のベースクラス */
+    .screen {
+      display: none;
+      animation: fadeIn 0.4s ease-out forwards;
+      min-height: 100vh;
+      padding-bottom: 60px;
+    }
+    .screen.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 共通ヘッダー */
+    header {
+      background-color: #fff;
+      text-align: center;
+      padding: 16px;
+      font-weight: 700;
+      font-size: 18px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header .back-btn { font-size: 20px; color: var(--text-main); cursor: pointer; visibility: hidden; width: 24px; }
+    header .title-text { flex: 1; text-align: center; font-weight: 700; }
+    header .dummy-space { width: 24px; }
+
+    /* ----------------------------------
+       画面1: 天気予報＆リスト
+    ---------------------------------- */
+    .weather-list { padding: 12px; }
+    .weather-card {
+      background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px;
+      display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+      cursor: pointer; transition: background 0.2s;
+    }
+    .weather-card:active { background: #f9f9f9; }
+    .date-box { width: 60px; text-align: center; border-right: 1px solid var(--border); padding-right: 12px; }
+    .date-day { font-size: 20px; font-weight: 700; }
+    .date-dow { font-size: 12px; color: var(--text-sub); }
+    .dow-sat { color: #007AFF; } .dow-sun { color: #FF3B30; }
+    .weather-info { flex: 1; padding-left: 16px; }
+    .main-weather { display: flex; align-items: center; margin-bottom: 8px; }
+    .weather-icon { font-size: 24px; margin-right: 12px; width: 30px; text-align: center; }
+    .temp { font-size: 16px; font-weight: 500; }
+    .temp-high { color: #FF3B30; } .temp-low { color: #007AFF; margin-left: 8px;}
+    .sub-metrics { display: flex; gap: 12px; font-size: 12px; color: var(--text-sub); }
+    .metric { display: flex; align-items: center; gap: 4px; }
+    .metric i { color: #A0AEC0; }
+    .metric.snow-heavy { color: var(--blue); font-weight: 700; }
+    .metric.snow-heavy i { color: var(--blue); }
+    .action-icon { width: 40px; height: 40px; background: var(--snow-light); color: var(--blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+
+    .load-more-btn {
+      display: block; width: calc(100% - 24px); margin: 16px auto; padding: 14px;
+      background: #fff; border: 1px solid var(--blue); color: var(--blue);
+      border-radius: 8px; font-size: 14px; font-weight: 700; text-align: center; cursor: pointer;
+    }
+    .hidden { display: none !important; }
+
+    /* ボトムシート */
+    .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 99; opacity: 0; visibility: hidden; transition: opacity 0.3s; }
+    .overlay.active { opacity: 1; visibility: visible; }
+    .bottom-sheet {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%);
+      width: 100%; max-width: 480px; background: #fff; border-radius: 20px 20px 0 0;
+      z-index: 100; transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1); padding: 24px 20px 40px;
+    }
+    .bottom-sheet.active { transform: translateX(-50%) translateY(0); }
+    .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .sheet-title { font-size: 18px; font-weight: 700; }
+    .close-btn { background: none; border: none; font-size: 24px; color: var(--text-sub); cursor: pointer; }
+    .ticket-group { margin-bottom: 20px; }
+    .ticket-group-title { font-size: 14px; color: var(--text-sub); margin-bottom: 8px; font-weight: 700;}
+    .ticket-item { display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 8px; }
+    .ticket-info h4 { font-size: 16px; margin-bottom: 4px; }
+    .ticket-info p { font-size: 12px; color: var(--text-sub); }
+    .ticket-price { font-size: 18px; font-weight: 700; }
+    .select-btn { background: var(--blue); color: #fff; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 700; cursor: pointer; margin-left: 12px; }
+
+    /* ----------------------------------
+       画面2: 購入決済画面
+    ---------------------------------- */
+    .checkout-section { padding: 16px; }
+    .summary-card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+    .section-title { font-size: 14px; color: var(--text-sub); font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;}
+    
+    .summary-details .order-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; color: var(--blue); }
+    .summary-details .order-date { font-size: 14px; font-weight: 500; margin-bottom: 16px; color: var(--text-main); }
+    .price-row { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border); padding-top: 14px; }
+    .price-total { font-size: 22px; font-weight: 900; color: #333; }
+
+    /* 決済方法の選択 */
+    .payment-option {
+      background: #fff; border: 2px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px;
+      display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.2s;
+    }
+    .payment-option.selected { border-color: var(--blue); background-color: #F0F7FF; }
+    .payment-meta { display: flex; align-items: center; gap: 12px; }
+    .payment-meta i { font-size: 20px; width: 24px; text-align: center; }
+    .payment-title { font-weight: 700; font-size: 15px; }
+    .radio-circle { width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .payment-option.selected .radio-circle { border-color: var(--blue); }
+    .payment-option.selected .radio-circle::after { content: ''; width: 10px; height: 10px; background: var(--blue); border-radius: 50%; }
+
+    /* クレジットカードフォームフォーム（簡易） */
+    .cc-form { background: #fff; border-radius: 12px; padding: 16px; margin-top: -4px; margin-bottom: 16px; border: 1px solid var(--border); }
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-size: 11px; color: var(--text-sub); margin-bottom: 4px; font-weight: 700; }
+    .form-group input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; }
+
+    /* 決済決済ボタン */
+    .pay-submit-btn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 10px; text-align: center; display: block;}
+    .btn-blue { background: var(--blue); color: #fff; }
+    .btn-apple { background: var(--apple-black); color: #fff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 16px; }
+
+    /* ----------------------------------
+       画面3: 決済完了画面 (ワクワクUI)
+    ---------------------------------- */
+    .success-container { text-align: center; padding: 40px 24px; position: relative; overflow: hidden; min-height: 100vh; background: linear-gradient(180deg, #E0F2FE 0%, #FFFFFF 100%); }
+    
+    /* 雪を降らせるアニメーション背景 */
+    .snow-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+    .snowflake { position: absolute; color: #fff; font-size: 1.5em; top: -20px; animation: fall linear infinite; }
+    @keyframes fall {
+      0% { top: -20px; transform: translateX(0) rotate(0deg); opacity: 1; }
+      100% { top: 100%; transform: translateX(50px) rotate(360deg); opacity: 0.3; }
+    }
+
+    .success-content { position: relative; z-index: 2; }
+    .success-icon-wrap { width: 80px; height: 80px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; box-shadow: 0 8px 20px rgba(0,122,255,0.15); }
+    .success-icon-wrap i { font-size: 40px; color: var(--blue); animation: bounce 1s infinite alternate; }
+    @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+
+    .success-title { font-size: 24px; font-weight: 900; color: #1A365D; margin-bottom: 8px; }
+    .success-msg { font-size: 14px; color: #4A5568; margin-bottom: 28px; line-height: 1.6; }
+
+    .receipt-card { background: rgba(255,255,255,0.9); border-radius: 16px; padding: 20px; text-align: left; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #fff; }
+    .receipt-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
+    .receipt-row .label { color: var(--text-sub); }
+    .receipt-row .val { font-weight: 700; color: var(--text-main); }
+    
+    .btn-group { display: flex; flex-direction: column; gap: 12px; }
+    .action-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform 0.1s; }
+    .action-btn:active { transform: scale(0.98); }
+    .btn-share { background: var(--line-green); color: #fff; }
+    .btn-qr { background: var(--blue); color: #fff; box-shadow: 0 4px 12px rgba(0,122,255,0.2); }
+
+    /* QRポップアップモーダル */
+    .qr-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all 0.3s; }
+    .qr-modal.active { opacity: 1; visibility: visible; }
+    .qr-card { background: #fff; padding: 28px; border-radius: 20px; text-align: center; max-width: 320px; width: 90%; transform: scale(0.9); transition: transform 0.3s; }
+    .qr-modal.active .qr-card { transform: scale(1); }
+    .qr-code-dummy { width: 180px; height: 180px; background: #333; margin: 20px auto; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 60px; border-radius: 8px; position: relative; }
+    .qr-close { background: var(--text-main); color: #fff; padding: 10px 24px; border: none; border-radius: 20px; font-weight: 700; margin-top: 16px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  
+  <header id="appHeader">
+    <div class="back-btn" id="backBtn" onclick="goBack()"><i class="fas fa-chevron-left"></i></div>
+    <div class="title-text" id="headerTitle">週間天気 ＆ チケット予約</div>
+    <div class="dummy-space"></div>
+  </header>
+
+  <div id="screen-weather" class="screen active">
+    <div class="weather-list" id="weatherList"></div>
+    <button id="loadMoreBtn" class="load-more-btn">さらに1週間読み込む</button>
+  </div>
+
+  <div id="screen-checkout" class="screen">
+    <div class="checkout-section">
+      
+      <div class="section-title"><i class="fas fa-shopping-bag"></i> 選択した商品</div>
+      <div class="summary-card">
+        <div class="summary-details">
+          <div class="order-title" id="checkoutTicketName">大人 1日券</div>
+          <div class="order-date" id="checkoutDate">1月1日(月)</div>
+        </div>
+        <div class="price-row">
+          <span style="font-weight: 700;">合計金額</span>
+          <span class="price-total" id="checkoutPrice">¥5,500</span>
+        </div>
+      </div>
+
+      <div class="section-title"><i class="fas fa-credit-card"></i> お支払い方法</div>
+      
+      <div class="payment-option selected" onclick="selectPayment('applepay')">
+        <div class="payment-meta">
+          <i class="fab fa-apple" style="font-size: 24px;"></i>
+          <span class="payment-title">Apple Pay</span>
+        </div>
+        <div class="radio-circle"></div>
+      </div>
+
+      <div class="payment-option" onclick="selectPayment('creditcard')">
+        <div class="payment-meta">
+          <i class="fas fa-credit-card"></i>
+          <span class="payment-title">クレジットカード</span>
+        </div>
+        <div class="radio-circle"></div>
+      </div>
+
+      <div class="cc-form hidden" id="ccForm">
+        <div class="form-group">
+          <label>カード番号</label>
+          <input type="text" placeholder="•••• •••• •••• ••••" value="4200 1234 5678 9012">
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <div class="form-group" style="flex: 1;">
+            <label>有効期限</label>
+            <input type="text" placeholder="MM/YY" value="12/28">
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label>セキリュティコード</label>
+            <input type="text" placeholder="CVC" value="123">
+          </div>
+        </div>
+      </div>
+
+      <button id="applePayBtn" class="pay-submit-btn btn-apple" onclick="processPayment()">
+        <i class="fab fa-apple"></i> Payで購入する
+      </button>
+      <button id="creditCardBtn" class="pay-submit-btn btn-blue hidden" onclick="processPayment()">
+        安全に決済を確定する
+      </button>
+
+    </div>
+  </div>
+
+  <div id="screen-success" class="screen">
+    <div class="success-container">
+      <div class="snow-bg" id="snowBg"></div>
+      
+      <div class="success-content">
+        <div class="success-icon-wrap">
+          <i class="fas fa-snowflake"></i>
+        </div>
+        <h2 class="success-title">購入が完了しました！</h2>
+        <p class="success-msg">ゲレンデがあなたを待っています！<br>当日は素晴らしいパウダーになりますように。</p>
+
+        <div class="receipt-card">
+          <div class="receipt-row" style="border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 14px;">
+            <span class="label" style="font-weight: 700; color: #1A365D;">注文内容</span>
+            <span class="val" style="color: var(--blue);">確定</span>
+          </div>
+          <div class="receipt-row">
+            <span class="label">利用日</span>
+            <span class="val" id="successDate">1月1日(月)</span>
+          </div>
+          <div class="receipt-row">
+            <span class="label">券種</span>
+            <span class="val" id="successTicketName">大人 1日券</span>
+          </div>
+          <div class="receipt-row">
+            <span class="label">決済方法</span>
+            <span class="val" id="successPaymentMethod">Apple Pay</span>
+          </div>
+          <div class="receipt-row" style="margin-bottom: 0; margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--border);">
+            <span class="label" style="font-weight: 700;">支払総額</span>
+            <span class="val" id="successPrice" style="font-size: 18px; color: #333;">¥5,500</span>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="action-btn btn-qr" onclick="toggleQrModal(true)">
+            <i class="fas fa-qrcode"></i> QRコードを表示する
+          </button>
+          <button class="action-btn btn-share" onclick="shareToFriends()">
+            <i class="fab fa-line"></i> お友達にシェアする
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="bottom-sheet" id="bottomSheet">
+  <div class="sheet-header">
+    <div class="sheet-title" id="sheetTitle">日時 のリフト券</div>
+    <button class="close-btn" id="closeBtn" onclick="closeSheet()"><i class="fas fa-times"></i></button>
+  </div>
+  
+  <div class="ticket-group">
+    <div class="ticket-group-title">大人（中学生以上）</div>
+    <div class="ticket-item">
+      <div class="ticket-info"><h4>1日券</h4><p>営業開始 〜 16:30まで</p></div>
+      <div style="display: flex; align-items: center;">
+        <div class="ticket-price">¥5,500</div>
+        <button class="select-btn" onclick="selectTicket('大人 1日券', '¥5,500')">選択</button>
+      </div>
+    </div>
+    <div class="ticket-item">
+      <div class="ticket-info"><h4>午後券</h4><p>12:00 〜 16:30まで</p></div>
+      <div style="display: flex; align-items: center;">
+        <div class="ticket-price">¥4,000</div>
+        <button class="select-btn" onclick="selectTicket('大人 午後券', '¥4,000')">選択</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ticket-group">
+    <div class="ticket-group-title">子供（小学生以下）</div>
+    <div class="ticket-item">
+      <div class="ticket-info"><h4>1日券</h4></div>
+      <div style="display: flex; align-items: center;">
+        <div class="ticket-price">¥3,000</div>
+        <button class="select-btn" onclick="selectTicket('子供 1日券', '¥3,000')">選択</button>
+      </div>
+    </div>
+    <div class="ticket-item">
+      <div class="ticket-info"><h4>午後券</h4></div>
+      <div style="display: flex; align-items: center;">
+        <div class="ticket-price">¥2,000</div>
+        <button class="select-btn" onclick="selectTicket('子供 午後券', '¥2,000')">選択</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="qr-modal" id="qrModal" onclick="toggleQrModal(false)">
+  <div class="qr-card" onclick="event.stopPropagation()">
+    <h3 style="font-size: 18px; font-weight: 700;">自動発券用QRコード</h3>
+    <p style="font-size: 12px; color: var(--text-sub); margin-top: 4px;">スキー場の自動発券機にかざしてください</p>
+    <div class="qr-code-dummy">
+      <i class="fas fa-qrcode"></i>
+    </div>
+    <div style="font-size: 14px; font-weight: 700; letter-spacing: 1px;">RESERVE-7781-920</div>
+    <button class="qr-close" onclick="toggleQrModal(false)">閉じる</button>
+  </div>
+</div>
+
+<script>
+  // ----------------------------------
+  // 状態管理とダミーデータ
+  // ----------------------------------
+  let selectedDateStr = "";
+  let selectedTicketName = "";
+  let selectedPrice = "";
+  let currentPaymentMethod = "applepay";
+  let currentScreen = "weather";
+
+  const weathers = [
+    { icon: 'fa-snowflake', color: '#007AFF', label: '大雪' },
+    { icon: 'fa-snowflake', color: '#007AFF', label: '雪' },
+    { icon: 'fa-cloud', color: '#888888', label: '曇り' },
+    { icon: 'fa-sun', color: '#FF9500', label: '晴れ' }
+  ];
+  const dows = ['日', '月', '火', '水', '木', '金', '土'];
+  const weatherData = [];
+  let currentDate = new Date();
+
+  // 14日分のダミーデータを生成
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() + i);
+    const w = weathers[Math.floor(Math.random() * weathers.length)];
+    const snow = w.label.includes('雪') ? Math.floor(Math.random() * 30) + 5 : 0;
+    const wind = Math.floor(Math.random() * 10) + 1;
+    
+    weatherData.push({
+      dateStr: `${d.getMonth() + 1}/${d.getDate()}`,
+      fullDateStr: `${d.getMonth() + 1}月${d.getDate()}日`,
+      dow: dows[d.getDay()],
+      dowIdx: d.getDay(),
+      weather: w,
+      tempHigh: Math.floor(Math.random() * 4) - 2,
+      tempLow: Math.floor(Math.random() * -10) - 5,
+      snow: snow,
+      wind: wind
+    });
+  }
+
+  // 要素の取得
+  const weatherListEl = document.getElementById('weatherList');
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
+  const bottomSheet = document.getElementById('bottomSheet');
+  const overlay = document.getElementById('overlay');
+  const sheetTitle = document.getElementById('sheetTitle');
+  const backBtn = document.getElementById('backBtn');
+  const headerTitle = document.getElementById('headerTitle');
+
+  // ----------------------------------
+  // 画面遷移コントロール
+  // ----------------------------------
+  function navigateTo(screenId) {
+    currentScreen = screenId;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(`screen-${screenId}`).classList.add('active');
+    window.scrollTo(0, 0);
+
+    // ヘッダーUIの調整
+    if (screenId === 'weather') {
+      backBtn.style.visibility = 'hidden';
+      headerTitle.innerText = "週間天気 ＆ チケット予約";
+    } else if (screenId === 'checkout') {
+      backBtn.style.visibility = 'visible';
+      headerTitle.innerText = "購入手続き";
+    } else if (screenId === 'success') {
+      backBtn.style.visibility = 'hidden'; // 完了後は戻らせない（誤決済防止）
+      headerTitle.innerText = "購入完了";
+      initSnowAnimation(); // 雪降らしスタート
+    }
+  }
+
+  function goBack() {
+    if (currentScreen === 'checkout') {
+      navigateTo('weather');
+    }
+  }
+
+  // ----------------------------------
+  // 画面1: 天気・チケット選択 ロジック
+  // ----------------------------------
+  function renderList(startIndex, count) {
+    let html = '';
+    for (let i = startIndex; i < startIndex + count; i++) {
+      if (!weatherData[i]) break;
+      const data = weatherData[i];
+      let dowClass = data.dowIdx === 0 ? 'dow-sun' : (data.dowIdx === 6 ? 'dow-sat' : '');
+      const snowClass = data.snow >= 15 ? 'snow-heavy' : '';
+
+      html += `
+        <div class="weather-card" onclick="openSheet('${data.fullDateStr}(${data.dow})')">
+          <div class="date-box">
+            <div class="date-day">${data.dateStr.split('/')[1]}</div>
+            <div class="date-dow ${dowClass}">${data.dow}</div>
+          </div>
+          <div class="weather-info">
+            <div class="main-weather">
+              <i class="fas ${data.weather.icon} weather-icon" style="color: ${data.weather.color}"></i>
+              <span class="temp temp-high">${data.tempHigh}°</span>
+              <span class="temp temp-low">${data.tempLow}°</span>
+            </div>
+            <div class="sub-metrics">
+              <div class="metric ${snowClass}"><i class="fas fa-snowflake"></i> ${data.snow}cm</div>
+              <div class="metric"><i class="fas fa-wind"></i> ${data.wind}m/s</div>
+            </div>
+          </div>
+          <div class="action-icon"><i class="fas fa-ticket-alt"></i></div>
+        </div>
+      `;
+    }
+    weatherListEl.insertAdjacentHTML('beforeend', html);
+  }
+
+  // 初期表示と「さらに読み込む」
+  renderList(0, 7);
+  loadMoreBtn.addEventListener('click', () => {
+    renderList(7, 7);
+    loadMoreBtn.classList.add('hidden');
+  });
+
+  window.openSheet = function(dateText) {
+    selectedDateStr = dateText;
+    sheetTitle.innerText = `${dateText} のリフト券`;
+    overlay.classList.add('active');
+    bottomSheet.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  };
+
+  function closeSheet() {
+    overlay.classList.remove('active');
+    bottomSheet.classList.remove('active');
+    document.body.style.overflow = 'auto';
+  }
+
+  // チケットが選択されたら決済画面へ
+  function selectTicket(ticketName, price) {
+    selectedTicketName = ticketName;
+    selectedPrice = price;
+    closeSheet();
+
+    // 決済画面にデータを反映
+    document.getElementById('checkoutTicketName').innerText = selectedTicketName;
+    document.getElementById('checkoutDate').innerText = selectedDateStr;
+    document.getElementById('checkoutPrice').innerText = selectedPrice;
+
+    navigateTo('checkout');
+  }
+
+  // ----------------------------------
+  // 画面2: 決済画面 ロジック
+  // ----------------------------------
+  function selectPayment(method) {
+    currentPaymentMethod = method;
+    document.querySelectorAll('.payment-option').forEach(el => el.classList.remove('selected'));
+    
+    const targetIdx = method === 'applepay' ? 0 : 1;
+    document.querySelectorAll('.payment-option')[targetIdx].classList.add('selected');
+
+    if (method === 'creditcard') {
+      document.getElementById('ccForm').classList.remove('hidden');
+      document.getElementById('creditCardBtn').classList.remove('hidden');
+      document.getElementById('applePayBtn').classList.add('hidden');
+    } else {
+      document.getElementById('ccForm').classList.add('hidden');
+      document.getElementById('creditCardBtn').classList.add('hidden');
+      document.getElementById('applePayBtn').classList.remove('hidden');
+    }
+  }
+
+  function processPayment() {
+    // 完了画面へデータを反映
+    document.getElementById('successDate').innerText = selectedDateStr;
+    document.getElementById('successTicketName').innerText = selectedTicketName;
+    document.getElementById('successPrice').innerText = selectedPrice;
+    document.getElementById('successPaymentMethod').innerText = currentPaymentMethod === 'applepay' ? 'Apple Pay' : 'クレジットカード';
+
+    navigateTo('success');
+  }
+
+  // ----------------------------------
+  // 画面3: 決済完了＆演出 ロジック
+  // ----------------------------------
+  function initSnowAnimation() {
+    const snowBg = document.getElementById('snowBg');
+    snowBg.innerHTML = ''; // リセット
+    for (let i = 0; i < 30; i++) {
+      const flake = document.createElement('div');
+      flake.className = 'snowflake';
+      flake.innerHTML = '<i class="fas fa-snowflake"></i>';
+      flake.style.left = Math.random() * 100 + '%';
+      flake.style.animationDuration = (Math.random() * 3 + 2) + 's'; // 2〜5秒で落下
+      flake.style.animationDelay = Math.random() * 3 + 's';
+      flake.style.fontSize = (Math.random() * 10 + 10) + 'px';
+      flake.style.color = `rgba(255, 255, 255, ${Math.random() * 0.7 + 0.3})`;
+      snowBg.appendChild(flake);
+    }
+  }
+
+  function toggleQrModal(show) {
+    const modal = document.getElementById('qrModal');
+    if (show) modal.classList.add('active');
+    else modal.classList.remove('active');
+  }
+
+  function shareToFriends() {
+    alert(`【LINEの共有機能(ダミー)が起動しました】\nメッセージ内容:\n「${selectedDateStr}に一緒に滑りに行こう！リフト券ゲットしたよ！⛷️🏂」`);
+  }
+</script>
+
+</body>
+</html>
