@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>マイトラベル - クーポン</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #00B900;
+      --blue: #007AFF;
+      --orange: #FF9500; /* クーポン用アクセントカラー */
+      --bg-color: #F4F5F7;
+      --text-main: #333333;
+      --text-sub: #888888;
+      --border: #E5E5EA;
+      --used-gray: #C7C7CC;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans JP', sans-serif; background-color: #EFEFEF; color: var(--text-main); }
+
+    /* モバイルコンテナ */
+    .app-container {
+      max-width: 480px;
+      margin: 0 auto;
+      background-color: var(--bg-color);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+      padding-bottom: 40px;
+    }
+
+    /* ヘッダー */
+    header {
+      background-color: #fff;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 10;
+    }
+    header .back-btn { font-size: 20px; color: var(--text-main); cursor: pointer; width: 24px; }
+    header .title-text { flex: 1; text-align: center; font-weight: 700; font-size: 18px; }
+    header .dummy-space { width: 24px; }
+
+    /* クーポンリスト */
+    .coupon-list-container { padding: 16px; }
+
+    .coupon-card {
+      background: #fff;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+      display: flex;
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .coupon-card:active { transform: scale(0.98); }
+    
+    /* 使用済みクーポンのスタイル */
+    .coupon-card.used { opacity: 0.6; pointer-events: none; filter: grayscale(100%); }
+
+    /* クーポンの左側（アイコンエリア） */
+    .coupon-left {
+      background: var(--orange);
+      color: #fff;
+      width: 80px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      position: relative;
+      border-right: 2px dashed rgba(255,255,255,0.5);
+    }
+    .coupon-left i { font-size: 28px; margin-bottom: 4px; }
+    .coupon-left span { font-size: 10px; font-weight: 700; }
+    
+    /* クーポンの切り取り線（半円） */
+    .coupon-left::before, .coupon-left::after {
+      content: ''; position: absolute; right: -8px; width: 16px; height: 16px;
+      background: var(--bg-color); border-radius: 50%;
+    }
+    .coupon-left::before { top: -8px; }
+    .coupon-left::after { bottom: -8px; }
+
+    /* クーポンの右側（情報エリア） */
+    .coupon-right { padding: 16px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    .shop-name { font-size: 11px; color: var(--text-sub); font-weight: 700; margin-bottom: 4px; }
+    .coupon-title { font-size: 16px; font-weight: 900; color: var(--text-main); margin-bottom: 6px; line-height: 1.3; }
+    .coupon-expiry { font-size: 11px; color: var(--text-sub); }
+
+    /* --- 利用モーダル（フルスクリーン） --- */
+    .redeem-modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #fff; z-index: 200;
+      transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+      display: flex; flex-direction: column;
+    }
+    .redeem-modal.active { transform: translateY(0); }
+
+    .modal-header { padding: 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+    .modal-close { font-size: 24px; color: var(--text-main); cursor: pointer; background: none; border: none; }
+
+    .modal-body { padding: 32px 24px; text-align: center; flex: 1; display: flex; flex-direction: column; }
+    
+    .target-shop { font-size: 14px; color: var(--text-sub); font-weight: 700; margin-bottom: 8px; }
+    .target-title { font-size: 24px; font-weight: 900; color: var(--orange); margin-bottom: 24px; line-height: 1.4; }
+    
+    .warning-box {
+      background: #FFF5E5; border: 1px solid #FFE0B2; border-radius: 8px; padding: 16px;
+      font-size: 13px; color: #D84315; font-weight: 700; line-height: 1.5; margin-bottom: auto;
+    }
+
+    /* 利用するボタン */
+    .btn-use {
+      background: var(--orange); color: #fff; width: 100%; padding: 18px;
+      border: none; border-radius: 30px; font-size: 18px; font-weight: 900;
+      cursor: pointer; box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3);
+      transition: transform 0.1s; margin-bottom: 24px;
+    }
+    .btn-use:active { transform: scale(0.96); }
+
+    /* --- 使用済み（アニメーション）状態 --- */
+    .success-view {
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      height: 100%; position: relative; overflow: hidden;
+      background: linear-gradient(135deg, #FF9500 0%, #FF5E3A 100%);
+      color: #fff;
+    }
+    .success-view.active { display: flex; animation: fadeIn 0.4s; }
+    
+    /* スクショ防止の動く背景（斜めストライプ） */
+    .animated-bg {
+      position: absolute; top: 0; left: 0; width: 200%; height: 200%;
+      background: repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(255,255,255,0.1) 20px, rgba(255,255,255,0.1) 40px);
+      animation: slideBg 2s linear infinite; z-index: 1; pointer-events: none;
+    }
+    @keyframes slideBg { 0% { transform: translate(-50px, -50px); } 100% { transform: translate(0, 0); } }
+
+    .success-content { position: relative; z-index: 2; text-align: center; width: 100%; padding: 24px; }
+    .success-icon { font-size: 64px; margin-bottom: 16px; }
+    .success-title { font-size: 28px; font-weight: 900; margin-bottom: 8px; letter-spacing: 2px; }
+    .success-shop { font-size: 16px; font-weight: 700; margin-bottom: 32px; opacity: 0.9; }
+    
+    /* スタッフ確認用のライブ時計 */
+    .live-clock {
+      background: rgba(255,255,255,0.2); backdrop-filter: blur(4px);
+      padding: 16px 24px; border-radius: 16px; display: inline-block;
+      border: 1px solid rgba(255,255,255,0.4);
+    }
+    .live-clock-label { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+    .live-clock-time { font-size: 32px; font-weight: 900; font-family: monospace; letter-spacing: 1px; }
+
+    .btn-back-home {
+      position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+      background: #fff; color: var(--orange); border: none; border-radius: 20px;
+      padding: 12px 32px; font-weight: 700; z-index: 2; cursor: pointer;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  <header>
+    <div class="title-text">クーポン</div>
+    <div class="dummy-space"></div>
+  </header>
+
+  <div class="coupon-list-container" id="couponList">
+    </div>
+</div>
+
+<div class="redeem-modal" id="redeemModal">
+  <div id="confirmView" style="height: 100%; display: flex; flex-direction: column;">
+    <div class="modal-header">
+      <div class="dummy-space" style="width: 24px;"></div>
+      <div style="font-weight: 700; font-size: 16px;">クーポンの利用</div>
+      <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="target-shop" id="modalShop">レストラン アペティ</div>
+      <div class="target-title" id="modalTitle">お食事代 10%OFF</div>
+      
+      <div class="warning-box">
+        <i class="fas fa-exclamation-triangle"></i> 注意事項<br>
+        必ず「お会計時」にスタッフの目の前でボタンを押してください。<br>
+        誤って使用済みにした場合、クーポンの再発行はできません。
+      </div>
+
+      <button class="btn-use" onclick="confirmRedeem()">スタッフの前で「使用する」</button>
+    </div>
+  </div>
+
+  <div class="success-view" id="successView">
+    <div class="animated-bg"></div>
+    <div class="success-content">
+      <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+      <div class="success-title">使用済み</div>
+      <div class="success-shop" id="successShop">レストラン アペティ</div>
+      
+      <div class="live-clock">
+        <div class="live-clock-label">スタッフ確認用 現在時刻</div>
+        <div class="live-clock-time" id="clockDisplay">00:00:00</div>
+      </div>
+    </div>
+    <button class="btn-back-home" onclick="finishRedeem()">一覧へ戻る</button>
+  </div>
+</div>
+
+<script>
+  // ダミーデータ（3枚）
+  let coupons = [
+    {
+      id: 1,
+      shop: '山頂レストラン スノーピア',
+      title: 'カツカレー大盛り<br>無料アップグレード',
+      expiry: '今日まで有効',
+      icon: 'fa-utensils',
+      isUsed: false
+    },
+    {
+      id: 2,
+      shop: 'ギアレンタル POWDER',
+      title: 'プレミアムボード<br>レンタル 500円OFF',
+      expiry: '2024/03/31 まで有効',
+      icon: 'fa-snowboarding',
+      isUsed: false
+    },
+    {
+      id: 3,
+      shop: 'ベースカフェ CAFEBASE',
+      title: 'クレープご注文で<br>ホットコーヒー1杯無料',
+      expiry: '2024/03/31 まで有効',
+      icon: 'fa-coffee',
+      isUsed: false
+    }
+  ];
+
+  let selectedCouponId = null;
+  const couponListEl = document.getElementById('couponList');
+  const redeemModal = document.getElementById('redeemModal');
+  const confirmView = document.getElementById('confirmView');
+  const successView = document.getElementById('successView');
+  let clockInterval;
+
+  // リストの描画
+  function renderCoupons() {
+    let html = '';
+    coupons.forEach(c => {
+      const usedClass = c.isUsed ? 'used' : '';
+      html += `
+        <div class="coupon-card ${usedClass}" onclick="openModal(${c.id})">
+          <div class="coupon-left">
+            <i class="fas ${c.icon}"></i>
+            <span>${c.isUsed ? '使用済' : 'COUPON'}</span>
+          </div>
+          <div class="coupon-right">
+            <div class="shop-name">${c.shop}</div>
+            <div class="coupon-title">${c.title}</div>
+            <div class="coupon-expiry"><i class="far fa-clock"></i> ${c.expiry}</div>
+          </div>
+        </div>
+      `;
+    });
+    couponListEl.innerHTML = html;
+  }
+
+  // モーダルを開く
+  function openModal(id) {
+    const coupon = coupons.find(c => c.id === id);
+    if(coupon.isUsed) return;
+
+    selectedCouponId = id;
+    document.getElementById('modalShop').innerText = coupon.shop;
+    document.getElementById('modalTitle').innerHTML = coupon.title; // brタグ許可のためinnerHTML
+    
+    // 表示リセット
+    confirmView.style.display = 'flex';
+    successView.classList.remove('active');
+    
+    redeemModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  // モーダルを閉じる
+  function closeModal() {
+    redeemModal.classList.remove('active');
+    document.body.style.overflow = 'auto';
+  }
+
+  // クーポンを使用する（ダイアログ確認）
+  function confirmRedeem() {
+    if(confirm('本当にクーポンを使用しますか？\n※スタッフの目の前で操作してください。')) {
+      showSuccessView();
+    }
+  }
+
+  // アニメーション＆時計付きの使用済み画面を表示
+  function showSuccessView() {
+    const coupon = coupons.find(c => c.id === selectedCouponId);
+    coupon.isUsed = true; // 状態を使用済みに更新
+    
+    document.getElementById('successShop').innerText = coupon.shop;
+    
+    confirmView.style.display = 'none';
+    successView.classList.add('active');
+    
+    // 不正防止用リアルタイム時計のスタート
+    updateClock();
+    clockInterval = setInterval(updateClock, 1000);
+  }
+
+  // 時計の更新処理
+  function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    document.getElementById('clockDisplay').innerText = `${h}:${m}:${s}`;
+  }
+
+  // 一覧へ戻る
+  function finishRedeem() {
+    clearInterval(clockInterval);
+    closeModal();
+    renderCoupons(); // 使用済みを反映して再描画
+  }
+
+  // 初期描画
+  renderCoupons();
+</script>
+
+</body>
+</html>

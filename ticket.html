@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>購入済みリフト券</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #00B900;
+      --blue: #007AFF;
+      --bg-color: #F4F5F7;
+      --text-main: #333333;
+      --text-sub: #888888;
+      --border: #E5E5EA;
+      --active-green: #34C759;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans JP', sans-serif; background-color: #EFEFEF; color: var(--text-main); }
+
+    /* モバイルコンテナ */
+    .app-container {
+      max-width: 480px;
+      margin: 0 auto;
+      background-color: var(--bg-color);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+      padding-bottom: 40px;
+    }
+
+    /* ヘッダー */
+    header {
+      background-color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    header .back-btn { font-size: 20px; color: var(--text-main); cursor: pointer; width: 24px; }
+    header .title-text { flex: 1; text-align: center; font-weight: 700; font-size: 18px; }
+    header .dummy-space { width: 24px; }
+
+    /* チケットリスト */
+    .ticket-list-container {
+      padding: 16px;
+    }
+
+    .ticket-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .ticket-card:active {
+      transform: scale(0.98);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    
+    /* カードの左側のアクセントカラー（切り取り線風） */
+    .ticket-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0; width: 6px;
+      background: var(--blue);
+    }
+    .ticket-card.is-today::before { background: var(--active-green); }
+
+    .ticket-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    
+    .ticket-date { font-size: 18px; font-weight: 900; color: var(--text-main); }
+    
+    .status-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: #E5E5EA;
+      color: var(--text-sub);
+    }
+    .status-badge.active { background: #E8F5E9; color: var(--active-green); }
+
+    .ticket-body {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ticket-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .ticket-id { font-size: 12px; color: var(--text-sub); font-family: monospace; }
+    
+    .qr-icon-btn {
+      width: 44px; height: 44px;
+      background: #F0F7FF; color: var(--blue);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+
+    /* 空の際の状態（今回はダミーがあるので非表示） */
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-sub); display: none; }
+    .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+
+    /* QRコード ポップアップ モーダル */
+    .qr-modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+      z-index: 200; display: flex; align-items: center; justify-content: center;
+      opacity: 0; visibility: hidden; transition: all 0.3s;
+    }
+    .qr-modal.active { opacity: 1; visibility: visible; }
+    
+    .qr-card {
+      background: #fff; padding: 32px 24px; border-radius: 24px;
+      text-align: center; max-width: 340px; width: 90%;
+      transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .qr-modal.active .qr-card { transform: translateY(0); }
+    
+    .qr-modal-title { font-size: 20px; font-weight: 900; margin-bottom: 4px; color: var(--text-main); }
+    .qr-modal-desc { font-size: 14px; color: var(--blue); font-weight: 700; margin-bottom: 20px; }
+    
+    /* 実際の運用ではここにQRコードの画像が入ります */
+    .qr-code-box {
+      width: 220px; height: 220px; margin: 0 auto 16px;
+      background: #fff; border: 4px solid var(--text-main); border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .qr-code-box i { font-size: 140px; color: var(--text-main); }
+    
+    .qr-hint {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      font-size: 12px; color: #FF3B30; font-weight: 700; margin-bottom: 16px;
+      background: #FFF0F0; padding: 8px; border-radius: 8px;
+    }
+    
+    .qr-ticket-id { font-size: 16px; font-weight: 700; letter-spacing: 2px; font-family: monospace; color: var(--text-sub); margin-bottom: 24px; }
+    
+    .qr-close-btn {
+      background: var(--bg-color); color: var(--text-main);
+      padding: 14px; width: 100%; border: none; border-radius: 12px;
+      font-weight: 700; font-size: 16px; cursor: pointer; transition: background 0.2s;
+    }
+    .qr-close-btn:active { background: #E5E5EA; }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  
+  <header>
+    <div class="back-btn" onclick="history.back()"><i class="fas fa-chevron-left"></i></div>
+    <div class="title-text">マイチケット</div>
+    <div class="dummy-space"></div>
+  </header>
+
+  <div class="ticket-list-container" id="ticketList">
+    </div>
+
+</div>
+
+<div class="qr-modal" id="qrModal" onclick="closeQrModal()">
+  <div class="qr-card" onclick="event.stopPropagation()">
+    <div class="qr-modal-title" id="modalTicketTitle">大人 1日券</div>
+    <div class="qr-modal-desc" id="modalTicketDate">1月1日(月)</div>
+    
+    <div class="qr-hint">
+      <i class="fas fa-sun"></i> 画面を一番明るくしてかざしてください
+    </div>
+
+    <div class="qr-code-box">
+      <i class="fas fa-qrcode"></i>
+    </div>
+    
+    <div class="qr-ticket-id" id="modalTicketId">TKT-XXXX-XXXX</div>
+    
+    <button class="qr-close-btn" onclick="closeQrModal()">閉じる</button>
+  </div>
+</div>
+
+<script>
+  // ダミーデータ（2枚）
+  const myTickets = [
+    {
+      id: 'TKT-7781-920',
+      date: '今日（1月15日）',
+      title: '大人 1日券',
+      status: '利用可能',
+      isToday: true // 今日使えるチケットは緑色で強調
+    },
+    {
+      id: 'TKT-8823-114',
+      date: '2月10日(土)',
+      title: '子供 午後券',
+      status: '未使用',
+      isToday: false
+    }
+  ];
+
+  const ticketListEl = document.getElementById('ticketList');
+
+  // チケットリストを描画
+  function renderTickets() {
+    let html = '';
+    myTickets.forEach(ticket => {
+      const cardClass = ticket.isToday ? 'is-today' : '';
+      const badgeClass = ticket.isToday ? 'active' : '';
+
+      html += `
+        <div class="ticket-card ${cardClass}" onclick="openQrModal('${ticket.title}', '${ticket.date}', '${ticket.id}')">
+          <div class="ticket-header">
+            <div class="ticket-date">${ticket.date}</div>
+            <div class="status-badge ${badgeClass}">${ticket.status}</div>
+          </div>
+          <div class="ticket-body">
+            <div>
+              <div class="ticket-title">${ticket.title}</div>
+              <div class="ticket-id">注文番号: ${ticket.id}</div>
+            </div>
+            <div class="qr-icon-btn">
+              <i class="fas fa-qrcode"></i>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    ticketListEl.innerHTML = html;
+  }
+
+  // QRモーダル開閉ロジック
+  const qrModal = document.getElementById('qrModal');
+  const modalTicketTitle = document.getElementById('modalTicketTitle');
+  const modalTicketDate = document.getElementById('modalTicketDate');
+  const modalTicketId = document.getElementById('modalTicketId');
+
+  window.openQrModal = function(title, date, id) {
+    modalTicketTitle.innerText = title;
+    modalTicketDate.innerText = date;
+    modalTicketId.innerText = id;
+    
+    qrModal.classList.add('active');
+    document.body.style.overflow = 'hidden'; // 背景のスクロール防止
+  };
+
+  window.closeQrModal = function() {
+    qrModal.classList.remove('active');
+    document.body.style.overflow = 'auto';
+  };
+
+  // 初期化
+  renderTickets();
+
+</script>
+
+</body>
+</html>

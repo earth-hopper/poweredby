@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>スキー場 天気＆チケット予約</title>
+  <title>ABCスキー場</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -193,6 +193,34 @@
     .qr-modal.active .qr-card { transform: scale(1); }
     .qr-code-dummy { width: 180px; height: 180px; background: #333; margin: 20px auto; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 60px; border-radius: 8px; position: relative; }
     .qr-close { background: var(--text-main); color: #fff; padding: 10px 24px; border: none; border-radius: 20px; font-weight: 700; margin-top: 16px; cursor: pointer; }
+    /* 購入済みチケットボタン */
+    .my-ticket-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      background: #fff;
+      border: 2px solid var(--blue);
+      color: var(--blue);
+      padding: 14px 16px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0, 122, 255, 0.1);
+      transition: all 0.2s;
+    }
+    .my-ticket-btn i.fa-ticket-alt {
+      font-size: 18px;
+      margin-right: 10px;
+    }
+    .my-ticket-btn i.fa-chevron-right {
+      margin-left: auto; /* 右端に矢印を寄せる */
+      color: var(--blue);
+    }
+    .my-ticket-btn:active {
+      background: var(--snow-light);
+      transform: scale(0.98);
+    }
   </style>
 </head>
 <body>
@@ -201,11 +229,17 @@
   
   <header id="appHeader">
     <div class="back-btn" id="backBtn" onclick="goBack()"><i class="fas fa-chevron-left"></i></div>
-    <div class="title-text" id="headerTitle">天気予報 ＆ チケット予約</div>
+    <div class="title-text" id="headerTitle">日付の選択</div>
     <div class="dummy-space"></div>
   </header>
 
   <div id="screen-weather" class="screen active">
+    <div style="padding: 16px 12px 0;">
+      <button class="my-ticket-btn" onclick="window.location.href='ticket.html'">
+        <i class="fas fa-ticket-alt"></i> 購入済みのリフト券はこちら
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
     <div class="weather-list" id="weatherList"></div>
     <button id="loadMoreBtn" class="load-more-btn">さらに1週間読み込む</button>
   </div>
@@ -305,8 +339,8 @@
         </div>
 
         <div class="btn-group">
-          <button class="action-btn btn-qr" onclick="toggleQrModal(true)">
-            <i class="fas fa-qrcode"></i> QRコードを表示する
+          <button class="action-btn btn-qr" onclick="window.location.href='ticket.html'">
+            <i class="fas fa-ticket-alt"></i> 購入済みのリフト券はこちら
           </button>
           <button class="action-btn btn-share" onclick="shareToFriends()">
             <i class="fab fa-line"></i> お友達にシェアする
@@ -359,18 +393,6 @@
         <button class="select-btn" onclick="selectTicket('子供 午後券', '¥2,000')">選択</button>
       </div>
     </div>
-  </div>
-</div>
-
-<div class="qr-modal" id="qrModal" onclick="toggleQrModal(false)">
-  <div class="qr-card" onclick="event.stopPropagation()">
-    <h3 style="font-size: 18px; font-weight: 700;">自動発券用QRコード</h3>
-    <p style="font-size: 12px; color: var(--text-sub); margin-top: 4px;">スキー場の自動発券機にかざしてください</p>
-    <div class="qr-code-dummy">
-      <i class="fas fa-qrcode"></i>
-    </div>
-    <div style="font-size: 14px; font-weight: 700; letter-spacing: 1px;">RESERVE-7781-920</div>
-    <button class="qr-close" onclick="toggleQrModal(false)">閉じる</button>
   </div>
 </div>
 
@@ -436,7 +458,7 @@
     // ヘッダーUIの調整
     if (screenId === 'weather') {
       backBtn.style.visibility = 'hidden';
-      headerTitle.innerText = "天気予報 ＆ チケット予約";
+      headerTitle.innerText = "リフト券の購入";
     } else if (screenId === 'checkout') {
       backBtn.style.visibility = 'visible';
       headerTitle.innerText = "購入手続き";
@@ -571,12 +593,6 @@
       flake.style.color = `rgba(255, 255, 255, ${Math.random() * 0.7 + 0.3})`;
       snowBg.appendChild(flake);
     }
-  }
-
-  function toggleQrModal(show) {
-    const modal = document.getElementById('qrModal');
-    if (show) modal.classList.add('active');
-    else modal.classList.remove('active');
   }
 
   function shareToFriends() {
