@@ -1,334 +1,505 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ABCスキー場</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    :root {
-      --primary: #00B900;
-      --blue: #007AFF;
-      --orange: #FF9500; /* クーポン用アクセントカラー */
-      --bg-color: #F4F5F7;
-      --text-main: #333333;
-      --text-sub: #888888;
-      --border: #E5E5EA;
-      --used-gray: #C7C7CC;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>クーポン | 〇〇スキー場</title>
+    <style>
+        :root {
+            --primary-color: #007AFF; 
+            --accent-color: #FF9500;  
+            --bg-color: #F2F6F9;      
+            --surface-color: #FFFFFF;
+            --text-main: #1C1C1E;
+            --text-sub: #8E8E93;
+            --border-color: #E5E5EA;
+            /* クーポン用の暖色グラデーション */
+            --gradient-coupon: linear-gradient(135deg, #FFD02D 0%, #FF9500 100%);
+            --gradient-used: linear-gradient(135deg, #D1D1D6 0%, #AEAEB2 100%);
+        }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Noto Sans JP', sans-serif; background-color: #EFEFEF; color: var(--text-main); }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-    /* モバイルコンテナ */
-    .app-container {
-      max-width: 480px;
-      margin: 0 auto;
-      background-color: var(--bg-color);
-      min-height: 100vh;
-      position: relative;
-      overflow-x: hidden;
-      padding-bottom: 40px;
-    }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
 
-    /* ヘッダー */
-    header {
-      background-color: #fff;
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 16px; border-bottom: 1px solid var(--border);
-      position: sticky; top: 0; z-index: 10;
-    }
-    header .back-btn { font-size: 20px; color: var(--text-main); cursor: pointer; width: 24px; }
-    header .title-text { flex: 1; text-align: center; font-weight: 700; font-size: 18px; }
-    header .dummy-space { width: 24px; }
+        #app-container {
+            max-width: 480px;
+            margin: 0 auto;
+            background-color: var(--bg-color);
+            min-height: 100vh;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            overflow-x: hidden;
+        }
 
-    /* クーポンリスト */
-    .coupon-list-container { padding: 16px; }
+        .page-section {
+            display: none;
+            padding: 24px 20px;
+            animation: slideUp 0.4s cubic-bezier(0.1, 0.76, 0.55, 0.94) forwards;
+        }
+        .page-section.active {
+            display: block;
+        }
 
-    .coupon-card {
-      background: #fff;
-      border-radius: 12px;
-      margin-bottom: 16px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
-      display: flex;
-      overflow: hidden;
-      position: relative;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    .coupon-card:active { transform: scale(0.98); }
-    
-    /* 使用済みクーポンのスタイル */
-    .coupon-card.used { opacity: 0.6; pointer-events: none; filter: grayscale(100%); }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-    /* クーポンの左側（アイコンエリア） */
-    .coupon-left {
-      background: var(--orange);
-      color: #fff;
-      width: 80px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      position: relative;
-      border-right: 2px dashed rgba(255,255,255,0.5);
-    }
-    .coupon-left i { font-size: 28px; margin-bottom: 4px; }
-    .coupon-left span { font-size: 10px; font-weight: 700; }
-    
-    /* クーポンの切り取り線（半円） */
-    .coupon-left::before, .coupon-left::after {
-      content: ''; position: absolute; right: -8px; width: 16px; height: 16px;
-      background: var(--bg-color); border-radius: 50%;
-    }
-    .coupon-left::before { top: -8px; }
-    .coupon-left::after { bottom: -8px; }
+        h2 {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
 
-    /* クーポンの右側（情報エリア） */
-    .coupon-right { padding: 16px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
-    .shop-name { font-size: 11px; color: var(--text-sub); font-weight: 700; margin-bottom: 4px; }
-    .coupon-title { font-size: 16px; font-weight: 900; color: var(--text-main); margin-bottom: 6px; line-height: 1.3; }
-    .coupon-expiry { font-size: 11px; color: var(--text-sub); }
+        .section-desc {
+            font-size: 14px;
+            color: var(--text-sub);
+            margin-top: -12px;
+            margin-bottom: 24px;
+        }
 
-    /* --- 利用モーダル（フルスクリーン） --- */
-    .redeem-modal {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: #fff; z-index: 200;
-      transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
-      display: flex; flex-direction: column;
-    }
-    .redeem-modal.active { transform: translateY(0); }
+        /* --- クーポン一覧 UI --- */
+        .coupon-list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .coupon-card {
+            background: var(--surface-color);
+            border-radius: 18px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 6px 16px rgba(255, 149, 0, 0.08);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #FFF5E5;
+        }
+        .coupon-card:active {
+            transform: scale(0.96);
+            background: #FFFAF2;
+        }
+        .coupon-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 8px;
+            background: var(--gradient-coupon);
+        }
+        .coupon-card.used {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            border-color: transparent;
+            opacity: 0.65;
+        }
+        .coupon-card.used::before { background: var(--gradient-used); }
+        .coupon-card.used:active { background: var(--surface-color); }
 
-    .modal-header { padding: 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
-    .modal-close { font-size: 24px; color: var(--text-main); cursor: pointer; background: none; border: none; }
+        .coupon-icon {
+            font-size: 32px;
+            margin-right: 16px;
+            margin-left: 8px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+        .coupon-info { flex: 1; }
+        .coupon-title { font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 4px; }
+        .coupon-sub { font-size: 12px; color: var(--text-sub); font-weight: 700; }
+        .coupon-status {
+            font-size: 12px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+        .coupon-card:not(.used) .coupon-status { background: #FFF0D9; color: var(--accent-color); }
+        .coupon-card.used .coupon-status { background: #F2F2F7; color: var(--text-sub); }
 
-    .modal-body { padding: 32px 24px; text-align: center; flex: 1; display: flex; flex-direction: column; }
-    
-    .target-shop { font-size: 14px; color: var(--text-sub); font-weight: 700; margin-bottom: 8px; }
-    .target-title { font-size: 24px; font-weight: 900; color: var(--orange); margin-bottom: 24px; line-height: 1.4; }
-    
-    .warning-box {
-      background: #FFF5E5; border: 1px solid #FFE0B2; border-radius: 8px; padding: 16px;
-      font-size: 13px; color: #D84315; font-weight: 700; line-height: 1.5; margin-bottom: auto;
-    }
+        /* --- クーポン詳細＆スライド消し込み UI --- */
+        .coupon-detail-card {
+            background: var(--surface-color);
+            border-radius: 24px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.06);
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+        .coupon-header {
+            background: var(--gradient-coupon);
+            color: #FFF;
+            padding: 32px 24px;
+        }
+        .coupon-header.used { background: var(--gradient-used); }
+        .coupon-header .icon { font-size: 56px; margin-bottom: 12px; display: block; }
+        .coupon-header h3 { font-size: 22px; font-weight: 800; line-height: 1.4; }
+        
+        /* 切り取り線デザイン */
+        .coupon-notch {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface-color);
+            height: 24px;
+            margin: -12px -12px 0;
+            position: relative;
+            z-index: 2;
+        }
+        .notch-left, .notch-right { width: 24px; height: 24px; background: var(--bg-color); border-radius: 50%; }
+        .notch-line { flex: 1; border-top: 2px dashed var(--border-color); margin: 0 12px; }
 
-    /* 利用するボタン */
-    .btn-use {
-      background: var(--orange); color: #fff; width: 100%; padding: 18px;
-      border: none; border-radius: 30px; font-size: 18px; font-weight: 900;
-      cursor: pointer; box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3);
-      transition: transform 0.1s; margin-bottom: 24px;
-    }
-    .btn-use:active { transform: scale(0.96); }
+        .coupon-body { padding: 32px 24px 40px; }
+        .warning-text {
+            font-size: 13px;
+            font-weight: 700;
+            color: #FF3B30;
+            background: #FFEBEA;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            text-align: left;
+        }
 
-    /* --- 使用済み（アニメーション）状態 --- */
-    .success-view {
-      display: none; flex-direction: column; align-items: center; justify-content: center;
-      height: 100%; position: relative; overflow: hidden;
-      background: linear-gradient(135deg, #FF9500 0%, #FF5E3A 100%);
-      color: #fff;
-    }
-    .success-view.active { display: flex; animation: fadeIn 0.4s; }
-    
-    /* スクショ防止の動く背景（斜めストライプ） */
-    .animated-bg {
-      position: absolute; top: 0; left: 0; width: 200%; height: 200%;
-      background: repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(255,255,255,0.1) 20px, rgba(255,255,255,0.1) 40px);
-      animation: slideBg 2s linear infinite; z-index: 1; pointer-events: none;
-    }
-    @keyframes slideBg { 0% { transform: translate(-50px, -50px); } 100% { transform: translate(0, 0); } }
+        /* カスタムスライダー (店員操作用) */
+        .swipe-container {
+            position: relative;
+            width: 100%;
+            height: 64px;
+            background: #E5E5EA;
+            border-radius: 32px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .swipe-container.disabled { opacity: 0.5; pointer-events: none; }
+        .swipe-text {
+            position: absolute;
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--text-sub);
+            pointer-events: none;
+            z-index: 1;
+            transition: opacity 0.2s;
+        }
+        .swipe-bg {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 0%;
+            background: var(--accent-color);
+            z-index: 2;
+            transition: width 0.1s;
+        }
+        .swipe-thumb {
+            position: absolute;
+            left: 4px;
+            top: 4px;
+            width: 56px;
+            height: 56px;
+            background: #FFF;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-color);
+            font-size: 20px;
+            font-weight: bold;
+            cursor: grab;
+            transition: left 0.1s;
+        }
+        .swipe-thumb:active { cursor: grabbing; }
+        .swipe-thumb::after { content: '››'; }
+        
+        /* 使用済みの完了表示 */
+        .used-stamp {
+            display: none;
+            font-size: 28px;
+            font-weight: 900;
+            color: #8E8E93;
+            border: 4px solid #8E8E93;
+            padding: 12px 24px;
+            border-radius: 12px;
+            transform: rotate(-10deg);
+            margin: 20px auto 0;
+            animation: stampIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes stampIn {
+            0% { transform: scale(2) rotate(-10deg); opacity: 0; }
+            100% { transform: scale(1) rotate(-10deg); opacity: 1; }
+        }
 
-    .success-content { position: relative; z-index: 2; text-align: center; width: 100%; padding: 24px; }
-    .success-icon { font-size: 64px; margin-bottom: 16px; }
-    .success-title { font-size: 28px; font-weight: 900; margin-bottom: 8px; letter-spacing: 2px; }
-    .success-shop { font-size: 16px; font-weight: 700; margin-bottom: 32px; opacity: 0.9; }
-    
-    /* スタッフ確認用のライブ時計 */
-    .live-clock {
-      background: rgba(255,255,255,0.2); backdrop-filter: blur(4px);
-      padding: 16px 24px; border-radius: 16px; display: inline-block;
-      border: 1px solid rgba(255,255,255,0.4);
-    }
-    .live-clock-label { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
-    .live-clock-time { font-size: 32px; font-weight: 900; font-family: monospace; letter-spacing: 1px; }
-
-    .btn-back-home {
-      position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-      background: #fff; color: var(--orange); border: none; border-radius: 20px;
-      padding: 12px 32px; font-weight: 700; z-index: 2; cursor: pointer;
-    }
-
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  </style>
+        /* --- 共通ボタン & スクロールセーフエリア --- */
+        .scroll-wrapper { padding-bottom: 120px; }
+        .btn-bottom-fixed {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 480px;
+            padding: 16px 20px 36px;
+            background: linear-gradient(to top, var(--bg-color) 75%, rgba(242,246,249,0));
+            z-index: 10;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            border-radius: 14px;
+            border: none;
+            font-size: 16px;
+            font-weight: 700;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn:active { transform: scale(0.97); opacity: 0.9; }
+        .btn-secondary { background: var(--surface-color); color: var(--text-main); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    </style>
 </head>
 <body>
 
-<div class="app-container">
-  <header>
-    <div class="title-text">クーポン</div>
-    <div class="dummy-space"></div>
-  </header>
+<div id="app-container">
 
-  <div class="coupon-list-container" id="couponList">
-    </div>
-</div>
+    <main id="view-list" class="page-section active">
+        <h2>クーポン</h2>
+        <p class="section-desc">レストランやレンタルショップで使えるお得なクーポンです。対象の店舗でご提示ください。</p>
+        
+        <div class="scroll-wrapper">
+            <div class="coupon-list-container" id="coupon-list-container">
+                </div>
+        </div>
+    </main>
 
-<div class="redeem-modal" id="redeemModal">
-  <div id="confirmView" style="height: 100%; display: flex; flex-direction: column;">
-    <div class="modal-header">
-      <div class="dummy-space" style="width: 24px;"></div>
-      <div style="font-weight: 700; font-size: 16px;">クーポンの利用</div>
-      <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
-    </div>
-    <div class="modal-body">
-      <div class="target-shop" id="modalShop">レストラン アペティ</div>
-      <div class="target-title" id="modalTitle">お食事代 10%OFF</div>
-      
-      <div class="warning-box">
-        <i class="fas fa-exclamation-triangle"></i> 注意事項<br>
-        必ず「お会計時」にスタッフの目の前でボタンを押してください。<br>
-        誤って使用済みにした場合、クーポンの再発行はできません。
-      </div>
+    <main id="view-detail" class="page-section">
+        <div class="scroll-wrapper">
+            <h2 style="text-align: center; margin-bottom: 10px;">クーポンの利用</h2>
+            
+            <div class="coupon-detail-card" id="detail-card">
+                <div class="coupon-header" id="detail-header">
+                    <span class="icon" id="detail-icon">🍔</span>
+                    <h3 id="detail-title">レストランA<br>お食事代10%OFF</h3>
+                </div>
+                <div class="coupon-notch">
+                    <div class="notch-left"></div>
+                    <div class="notch-line"></div>
+                    <div class="notch-right"></div>
+                </div>
+                <div class="coupon-body">
+                    <div id="warning-msg" class="warning-text">
+                        ⚠️ 【店員専用】<br>この操作はスタッフが行います。お客様自身でスライドするとクーポンが無効になります。
+                    </div>
 
-      <button class="btn-use" onclick="confirmRedeem()">スタッフの前で「使用する」</button>
-    </div>
-  </div>
+                    <div class="swipe-container" id="swipe-container">
+                        <div class="swipe-bg" id="swipe-bg"></div>
+                        <div class="swipe-text" id="swipe-text">店員がスライドして利用</div>
+                        <div class="swipe-thumb" id="swipe-thumb"></div>
+                    </div>
 
-  <div class="success-view" id="successView">
-    <div class="animated-bg"></div>
-    <div class="success-content">
-      <div class="success-icon"><i class="fas fa-check-circle"></i></div>
-      <div class="success-title">使用済み</div>
-      <div class="success-shop" id="successShop">レストラン アペティ</div>
-      
-      <div class="live-clock">
-        <div class="live-clock-label">スタッフ確認用 現在時刻</div>
-        <div class="live-clock-time" id="clockDisplay">00:00:00</div>
-      </div>
-    </div>
-    <button class="btn-back-home" onclick="finishRedeem()">一覧へ戻る</button>
-  </div>
+                    <div id="used-stamp" class="used-stamp">利用済</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-bottom-fixed">
+            <button class="btn btn-secondary" onclick="goToList()">← クーポン一覧に戻る</button>
+        </div>
+    </main>
+
 </div>
 
 <script>
-  // ダミーデータ（3枚）
-  let coupons = [
-    {
-      id: 1,
-      shop: '山頂レストラン スノーピア',
-      title: 'カツカレー大盛り<br>無料アップグレード',
-      expiry: '今日まで有効',
-      icon: 'fa-utensils',
-      isUsed: false
-    },
-    {
-      id: 2,
-      shop: 'ギアレンタル POWDER',
-      title: 'プレミアムボード<br>レンタル 500円OFF',
-      expiry: '2024/03/31 まで有効',
-      icon: 'fa-snowboarding',
-      isUsed: false
-    },
-    {
-      id: 3,
-      shop: 'ベースカフェ CAFEBASE',
-      title: 'クレープご注文で<br>ホットコーヒー1杯無料',
-      expiry: '2024/03/31 まで有効',
-      icon: 'fa-coffee',
-      isUsed: false
+    // ダミーデータ
+    let dummyCoupons = [
+        { id: 1, icon: '🍔', title: '山頂レストラン', sub: 'お食事代から 10% OFF', isUsed: false },
+        { id: 2, icon: '🎿', title: 'レンタルショップ B', sub: 'スキー・スノボセット ¥500引', isUsed: false },
+        { id: 3, icon: '☕️', title: 'ベースカフェ', sub: 'ホットドリンク 1杯無料', isUsed: true }
+    ];
+
+    let currentCouponId = null;
+
+    // クーポン一覧のレンダリング
+    function renderList() {
+        const container = document.getElementById('coupon-list-container');
+        container.innerHTML = '';
+
+        dummyCoupons.forEach(coupon => {
+            let card = document.createElement('div');
+            card.className = coupon.isUsed ? 'coupon-card used' : 'coupon-card';
+            
+            let statusText = coupon.isUsed ? '使用済' : '利用可能';
+
+            card.innerHTML = `
+                <div class="coupon-icon">${coupon.icon}</div>
+                <div class="coupon-info">
+                    <div class="coupon-title">${coupon.title}</div>
+                    <div class="coupon-sub">${coupon.sub}</div>
+                </div>
+                <div class="coupon-status">${statusText}</div>
+            `;
+
+            card.onclick = () => showDetail(coupon);
+            container.appendChild(card);
+        });
     }
-  ];
 
-  let selectedCouponId = null;
-  const couponListEl = document.getElementById('couponList');
-  const redeemModal = document.getElementById('redeemModal');
-  const confirmView = document.getElementById('confirmView');
-  const successView = document.getElementById('successView');
-  let clockInterval;
+    // クーポン詳細画面の表示
+    function showDetail(coupon) {
+        currentCouponId = coupon.id;
+        
+        // データの流し込み
+        document.getElementById('detail-icon').innerText = coupon.icon;
+        document.getElementById('detail-title').innerHTML = `${coupon.title}<br>${coupon.sub}`;
+        
+        // 状態のリセット
+        resetSliderUI(coupon.isUsed);
 
-  // リストの描画
-  function renderCoupons() {
-    let html = '';
-    coupons.forEach(c => {
-      const usedClass = c.isUsed ? 'used' : '';
-      html += `
-        <div class="coupon-card ${usedClass}" onclick="openModal(${c.id})">
-          <div class="coupon-left">
-            <i class="fas ${c.icon}"></i>
-            <span>${c.isUsed ? '使用済' : 'COUPON'}</span>
-          </div>
-          <div class="coupon-right">
-            <div class="shop-name">${c.shop}</div>
-            <div class="coupon-title">${c.title}</div>
-            <div class="coupon-expiry"><i class="far fa-clock"></i> ${c.expiry}</div>
-          </div>
-        </div>
-      `;
-    });
-    couponListEl.innerHTML = html;
-  }
-
-  // モーダルを開く
-  function openModal(id) {
-    const coupon = coupons.find(c => c.id === id);
-    if(coupon.isUsed) return;
-
-    selectedCouponId = id;
-    document.getElementById('modalShop').innerText = coupon.shop;
-    document.getElementById('modalTitle').innerHTML = coupon.title; // brタグ許可のためinnerHTML
-    
-    // 表示リセット
-    confirmView.style.display = 'flex';
-    successView.classList.remove('active');
-    
-    redeemModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-  }
-
-  // モーダルを閉じる
-  function closeModal() {
-    redeemModal.classList.remove('active');
-    document.body.style.overflow = 'auto';
-  }
-
-  // クーポンを使用する（ダイアログ確認）
-  function confirmRedeem() {
-    if(confirm('本当にクーポンを使用しますか？\n※スタッフの目の前で操作してください。')) {
-      showSuccessView();
+        // 画面遷移
+        document.getElementById('view-list').classList.remove('active');
+        document.getElementById('view-detail').classList.add('active');
+        window.scrollTo(0, 0);
     }
-  }
 
-  // アニメーション＆時計付きの使用済み画面を表示
-  function showSuccessView() {
-    const coupon = coupons.find(c => c.id === selectedCouponId);
-    coupon.isUsed = true; // 状態を使用済みに更新
-    
-    document.getElementById('successShop').innerText = coupon.shop;
-    
-    confirmView.style.display = 'none';
-    successView.classList.add('active');
-    
-    // 不正防止用リアルタイム時計のスタート
-    updateClock();
-    clockInterval = setInterval(updateClock, 1000);
-  }
+    // スライダーのUI状態をリセット
+    function resetSliderUI(isUsed) {
+        const header = document.getElementById('detail-header');
+        const container = document.getElementById('swipe-container');
+        const warning = document.getElementById('warning-msg');
+        const stamp = document.getElementById('used-stamp');
+        const thumb = document.getElementById('swipe-thumb');
+        const bg = document.getElementById('swipe-bg');
 
-  // 時計の更新処理
-  function updateClock() {
-    const now = new Date();
-    const h = String(now.getHours()).padStart(2, '0');
-    const m = String(now.getMinutes()).padStart(2, '0');
-    const s = String(now.getSeconds()).padStart(2, '0');
-    document.getElementById('clockDisplay').innerText = `${h}:${m}:${s}`;
-  }
+        if (isUsed) {
+            header.classList.add('used');
+            container.style.display = 'none';
+            warning.style.display = 'none';
+            stamp.style.display = 'inline-block';
+        } else {
+            header.classList.remove('used');
+            container.style.display = 'flex';
+            warning.style.display = 'block';
+            stamp.style.display = 'none';
+            
+            // スライダー位置を初期化
+            thumb.style.left = '4px';
+            bg.style.width = '0%';
+            thumb.style.transition = 'left 0.3s';
+            bg.style.transition = 'width 0.3s';
+        }
+    }
 
-  // 一覧へ戻る
-  function finishRedeem() {
-    clearInterval(clockInterval);
-    closeModal();
-    renderCoupons(); // 使用済みを反映して再描画
-  }
+    // 一覧画面への戻り
+    function goToList() {
+        document.getElementById('view-detail').classList.remove('active');
+        document.getElementById('view-list').classList.add('active');
+        renderList(); // リストの状態を更新
+        window.scrollTo(0, 0);
+    }
 
-  // 初期描画
-  renderCoupons();
+    /* --- スワイプ消し込みのロジック --- */
+    const swipeContainer = document.getElementById('swipe-container');
+    const swipeThumb = document.getElementById('swipe-thumb');
+    const swipeBg = document.getElementById('swipe-bg');
+    const swipeText = document.getElementById('swipe-text');
+
+    let isDragging = false;
+    let startX = 0;
+    let maxDrag = 0;
+
+    // イベントリスナーの登録（タッチ＆マウス両対応）
+    swipeThumb.addEventListener('touchstart', handleStart, {passive: true});
+    document.addEventListener('touchmove', handleMove, {passive: false});
+    document.addEventListener('touchend', handleEnd);
+
+    swipeThumb.addEventListener('mousedown', handleStart);
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleEnd);
+
+    function handleStart(e) {
+        if (dummyCoupons.find(c => c.id === currentCouponId).isUsed) return;
+        isDragging = true;
+        startX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        maxDrag = swipeContainer.clientWidth - swipeThumb.clientWidth - 8; // 余白考慮
+        
+        // ドラッグ中はアニメーションをオフにする（追従を良くするため）
+        swipeThumb.style.transition = 'none';
+        swipeBg.style.transition = 'none';
+        swipeText.style.opacity = '0.3';
+    }
+
+    function handleMove(e) {
+        if (!isDragging) return;
+        // 横スクロールの防止
+        if (e.cancelable) e.preventDefault(); 
+        
+        let currentX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        let diff = currentX - startX;
+        
+        // 範囲制限
+        let pos = Math.max(0, Math.min(diff, maxDrag));
+        
+        swipeThumb.style.left = (pos + 4) + 'px';
+        swipeBg.style.width = (pos + 28) + 'px'; // 親のRに合わせて少し足す
+    }
+
+    function handleEnd(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        
+        swipeText.style.opacity = '1';
+        swipeThumb.style.transition = 'left 0.3s ease-out';
+        swipeBg.style.transition = 'width 0.3s ease-out';
+
+        let currentLeft = parseInt(swipeThumb.style.left) || 0;
+
+        // 95%以上スワイプされたら完了とみなす
+        if (currentLeft >= maxDrag * 0.95) {
+            // ピタッと端までくっつける
+            swipeThumb.style.left = (maxDrag + 4) + 'px';
+            swipeBg.style.width = '100%';
+            
+            setTimeout(() => {
+                completeCouponUse();
+            }, 300);
+        } else {
+            // 届かなかったら元に戻す
+            swipeThumb.style.left = '4px';
+            swipeBg.style.width = '0%';
+        }
+    }
+
+    function completeCouponUse() {
+        // データを使用済みに更新
+        let coupon = dummyCoupons.find(c => c.id === currentCouponId);
+        if (coupon) coupon.isUsed = true;
+        
+        // UIの切り替え
+        resetSliderUI(true);
+    }
+
+    // 初期起動
+    renderList();
 </script>
 
 </body>
